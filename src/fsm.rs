@@ -103,7 +103,7 @@ impl Setup<'_> {
     }
   }
 
-  pub fn set_receiver(&mut self, receiver: &'static dyn Receiver) -> Result<(), Error> {
+  pub fn set_receiver<'a>(&mut self, receiver: &'a dyn Receiver) -> Result<(), Error> {
     self.receiver = Some(receiver);
     Ok(())
   }
