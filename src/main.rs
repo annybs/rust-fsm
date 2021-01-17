@@ -1,36 +1,42 @@
 mod fsm;
 
-fn mymain() -> Result<bool, fsm::Error> {
-  let mut sm = fsm::StateMachine::new();
+fn build_state_machine() -> Result<fsm::StateMachine, fsm::Error> {
+  let mut setup = fsm::Setup::new();
 
   // error state can be entered at any time and is unrecoverable
-  sm.add_state("error")?;
-  sm.add_state("starting")?;
-  sm.add_state("ready")?;
-  sm.add_state("stopping")?;
-  sm.add_state("stopped")?;
+  setup.add_state("error")?;
+  setup.add_state("starting")?;
+  setup.add_state("ready")?;
+  setup.add_state("stopping")?;
+  setup.add_state("stopped")?;
 
-  sm.add_transition(fsm::INITIAL, "starting")?;
-  sm.add_transition("starting", "ready")?;
-  sm.add_transition("ready", "stopping")?;
-  sm.add_transition("stopping", "stopped")?;
-  sm.add_transition("stopped", "starting")?;
-  sm.add_transition(fsm::ANY, "error")?;
+  setup.add_transition(fsm::INITIAL, "starting")?;
+  setup.add_transition("starting", "ready")?;
+  setup.add_transition("ready", "stopping")?;
+  setup.add_transition("stopping", "stopped")?;
+  setup.add_transition("stopped", "starting")?;
+  setup.add_transition(fsm::ANY, "error")?;
 
-  let l = sm.transition("starting")?;
-  println!("Transitioned to {:?}", l);
+  Ok(fsm::StateMachine::new(setup))
+}
 
-  let l = sm.transition("ready")?;
-  println!("Transitioned to {:?}", l);
+fn mymain() -> Result<bool, fsm::Error> {
+  let mut sm = build_state_machine()?;
 
-  let l = sm.transition("stopping")?;
-  println!("Transitioned to {:?}", l);
+  let fstate = sm.transition("starting")?;
+  println!("Transitioned to {:?}", fstate);
 
-  let l = sm.transition("stopped")?;
-  println!("Transitioned to {:?}", l);
+  let fstate = sm.transition("ready")?;
+  println!("Transitioned to {:?}", fstate);
 
-  let l = sm.transition("error")?;
-  println!("Transitioned to {:?}", l);
+  let fstate = sm.transition("stopping")?;
+  println!("Transitioned to {:?}", fstate);
+
+  let fstate = sm.transition("stopped")?;
+  println!("Transitioned to {:?}", fstate);
+
+  let fstate = sm.transition("error")?;
+  println!("Transitioned to {:?}", fstate);
 
   Ok(true)
 }
