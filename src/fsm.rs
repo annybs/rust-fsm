@@ -39,6 +39,7 @@ pub struct State {
 // de facto StateMachine
 pub struct StateMachine {
   current_state: FiniteState,
+  // TODO
   // started: bool,
   states: Vec<State>,
   transitions: Vec<Transition>,
@@ -46,6 +47,19 @@ pub struct StateMachine {
 
 // a Transition is a tuple of (prev id, next id)
 pub type Transition = (String, String);
+
+/*
+impl FiniteState
+*/
+
+impl FiniteState {
+  // create a new FiniteState. state is not consumed
+  pub fn new(state: &State) -> FiniteState {
+    FiniteState {
+      id: state.id.to_string(),
+    }
+  }
+}
 
 /*
 impl Setup
@@ -74,6 +88,7 @@ impl Setup {
     }
   }
 
+  // create a new Setup
   pub fn new() -> Setup {
     Setup{
       states: Vec::<State>::new(),
@@ -99,13 +114,6 @@ impl StateMachine
 */
 
 impl StateMachine {
-  // create a new local state (similar to a state with instance metdata)
-  fn create_local_state(&self, state: &State) -> FiniteState {
-    FiniteState {
-      id: state.id.to_string(),
-    }
-  }
-
   // create a new StateMachine. setup is not consumed
   pub fn new(setup: Setup) -> StateMachine {
     let mut machine = StateMachine{
@@ -127,6 +135,7 @@ impl StateMachine {
     machine
   }
 
+  // TODO
   // pub fn start(&mut self) {}
 
   // transition from current state to given next state. error if transition or next state does not exist
@@ -141,7 +150,7 @@ impl StateMachine {
             Err(Error::NoState)
           }
           Some(state) => {
-            self.current_state = self.create_local_state(state);
+            self.current_state = FiniteState::new(state);
             Ok(&self.current_state)
           }
         }
@@ -179,6 +188,7 @@ trait WithStates {
     state
   }
 
+  // get own states
   fn get_states(&self) -> &Vec<State>;
 }
 
@@ -196,6 +206,7 @@ trait WithTransitions {
     transition
   }
 
+  // get own transitions
   fn get_transitions(&self) -> &Vec<Transition>;
 
   // get all transitions from given previous state to any other, including ANY previous state
