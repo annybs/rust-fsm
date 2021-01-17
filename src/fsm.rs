@@ -14,9 +14,9 @@ types
 
 #[derive(Debug)]
 pub enum Error {
-  InvalidStateID,
-  NoTransition,
-  NoState,
+  InvalidStateID(String),
+  NoTransition(String, String),
+  NoState(String),
 }
 
 // a FiniteState represents an effective, living state (generally the current state of a StateMachine)
@@ -25,8 +25,13 @@ pub struct FiniteState {
   pub id: String,
 }
 
+pub trait Receiver {
+  fn receive_state(&self, fstate: &FiniteState);
+}
+
 // Setup for a StateMachine
-pub struct Setup {
+pub struct Setup<'a> {
+  receiver: Option<&'a dyn Receiver>,
   states: Vec<State>,
   transitions: Vec<Transition>,
 }
@@ -37,10 +42,11 @@ pub struct State {
 }
 
 // de facto StateMachine
-pub struct StateMachine {
+pub struct StateMachine<'a> {
   current_state: FiniteState,
   // TODO
   // started: bool,
+  receiver: Option<&'a dyn Receiver>,
   states: Vec<State>,
   transitions: Vec<Transition>,
 }
@@ -65,45 +71,51 @@ impl FiniteState {
 impl Setup
 */
 
-impl Setup {
+impl Setup<'_> {
   // add a new state
-  pub fn add_state(&mut self, id: &str) -> Result<&State, Error> {
+  pub fn add_state(&mut self, id: &str) -> Result<(), Error> {
     if id == ANY || id == INITIAL {
-      Err(Error::InvalidStateID)
+      Err(Error::InvalidStateID(String::from(id)))
     } else {
       self.states.push(State {
         id: String::from(id),
       });
-      Ok(&self.states[self.states.len()-1])
+      Ok(())
     }
   }
 
   // add a new transition
-  pub fn add_transition(&mut self, prev: &str, next: &str) -> Result<&Transition, Error> {
+  pub fn add_transition(&mut self, prev: &str, next: &str) -> Result<(), Error> {
     if next == ANY || next == INITIAL {
-      Err(Error::InvalidStateID)
+      Err(Error::InvalidStateID(String::from(next)))
     } else {
       self.transitions.push((String::from(prev), String::from(next)));
-      Ok(&self.transitions[self.transitions.len()-1])
+      Ok(())
     }
   }
 
   // create a new Setup
-  pub fn new() -> Setup {
+  pub fn new<'a>() -> Setup<'a> {
     Setup{
+      receiver: None,
       states: Vec::<State>::new(),
       transitions: Vec::<Transition>::new(),
     }
   }
+
+  pub fn set_receiver(&mut self, receiver: &'static dyn Receiver) -> Result<(), Error> {
+    self.receiver = Some(receiver);
+    Ok(())
+  }
 }
 
-impl WithStates for Setup {
+impl WithStates for Setup<'_> {
   fn get_states(&self) -> &Vec<State> {
     &self.states
   }
 }
 
-impl WithTransitions for Setup {
+impl WithTransitions for Setup<'_> {
   fn get_transitions(&self) -> &Vec<Transition> {
     &self.transitions
   }
@@ -113,13 +125,14 @@ impl WithTransitions for Setup {
 impl StateMachine
 */
 
-impl StateMachine {
+impl StateMachine<'_> {
   // create a new StateMachine. setup is not consumed
-  pub fn new(setup: Setup) -> StateMachine {
+  pub fn new<'a>(setup: Setup<'a>) -> StateMachine<'a> {
     let mut machine = StateMachine{
       current_state: FiniteState {
         id: String::from(INITIAL),
       },
+      receiver: setup.receiver,
       // started: false,
       states: Vec::<State>::new(),
       transitions: Vec::<Transition>::new(),
@@ -142,15 +155,21 @@ impl StateMachine {
   pub fn transition(&mut self, next: &str) -> Result<&FiniteState, Error> {
     match self.get_transition(&self.current_state.id, next) {
       None => {
-        Err(Error::NoTransition)
+        Err(Error::NoTransition(self.current_state.id.to_string(), String::from(next)))
       }
       Some(_transition) => {
         match self.get_state(next) {
           None => {
-            Err(Error::NoState)
+            Err(Error::NoState(String::from(next)))
           }
           Some(state) => {
             self.current_state = FiniteState::new(state);
+            match self.receiver {
+              None => {}
+              Some(receiver) => {
+                receiver.receive_state(&self.current_state);
+              }
+            }
             Ok(&self.current_state)
           }
         }
@@ -159,13 +178,13 @@ impl StateMachine {
   }
 }
 
-impl WithStates for StateMachine {
+impl WithStates for StateMachine<'_> {
   fn get_states(&self) -> &Vec<State> {
     &self.states
   }
 }
 
-impl WithTransitions for StateMachine {
+impl WithTransitions for StateMachine<'_> {
   fn get_transitions(&self) -> &Vec<Transition> {
     &self.transitions
   }

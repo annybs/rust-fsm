@@ -1,6 +1,16 @@
 mod fsm;
 
-fn build_state_machine() -> Result<fsm::StateMachine, fsm::Error> {
+use fsm::{FiniteState, Receiver, StateMachine};
+
+struct MyStateMachine {}
+
+impl Receiver for MyStateMachine {
+  fn receive_state(&self, fstate: &FiniteState) {
+    println!("Transitioned to {:?}", fstate);
+  }
+}
+
+fn build_state_machine<'a> () -> Result<StateMachine<'a>, fsm::Error> {
   let mut setup = fsm::Setup::new();
 
   // error state can be entered at any time and is unrecoverable
@@ -17,32 +27,24 @@ fn build_state_machine() -> Result<fsm::StateMachine, fsm::Error> {
   setup.add_transition("stopped", "starting")?;
   setup.add_transition(fsm::ANY, "error")?;
 
+  setup.set_receiver(&MyStateMachine{})?;
   Ok(fsm::StateMachine::new(setup))
 }
 
-fn mymain() -> Result<bool, fsm::Error> {
+fn test_fsm() -> Result<bool, fsm::Error> {
   let mut sm = build_state_machine()?;
 
-  let fstate = sm.transition("starting")?;
-  println!("Transitioned to {:?}", fstate);
-
-  let fstate = sm.transition("ready")?;
-  println!("Transitioned to {:?}", fstate);
-
-  let fstate = sm.transition("stopping")?;
-  println!("Transitioned to {:?}", fstate);
-
-  let fstate = sm.transition("stopped")?;
-  println!("Transitioned to {:?}", fstate);
-
-  let fstate = sm.transition("error")?;
-  println!("Transitioned to {:?}", fstate);
+  sm.transition("starting")?;
+  sm.transition("ready")?;
+  sm.transition("stopping")?;
+  sm.transition("stopped")?;
+  sm.transition("error")?;
 
   Ok(true)
 }
 
 fn main() {
-  match mymain() {
+  match test_fsm() {
     Ok(_) => {
       println!("All OK");
     }
